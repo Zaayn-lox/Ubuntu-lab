@@ -6,6 +6,8 @@ use App\Models\Post;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class PostController extends Controller
@@ -38,6 +40,19 @@ class PostController extends Controller
         ]);
 
         $post = $request->user()->posts()->create($data);
+        $post->load('author');
+
+        try {
+            Http::timeout(2)->post('http://127.0.0.1:8000/internal/broadcast', [
+                'id' => $post->id,
+                'title' => $post->title,
+                'body' => $post->body,
+                'author' => $post->author->name,
+                'created_at' => $post->created_at->format('Y-m-d H:i'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('WS broadcast failed: ' . $e->getMessage());
+        }
 
         return redirect()
             ->route('posts.show', $post)
