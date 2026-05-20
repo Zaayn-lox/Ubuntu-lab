@@ -1,0 +1,47 @@
+server {
+    listen 80;
+    server_name belyaevubuntu.ru www.belyaevubuntu.ru;
+
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name belyaevubuntu.ru www.belyaevubuntu.ru;
+
+    ssl_certificate /etc/letsencrypt/live/belyaevubuntu.ru/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/belyaevubuntu.ru/privkey.pem;
+
+    root /var/www/boardy/public;
+    index index.php;
+
+    charset utf-8;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico {
+        access_log off;
+        log_not_found off;
+    }
+
+    location = /robots.txt {
+        access_log off;
+        log_not_found off;
+    }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
