@@ -1,0 +1,44 @@
+[90m= [39m[34;4mIlluminate\Database\Eloquent\Collection[39;24m {#8055
+    [34mall[39m: [
+      [34;4mApp\Models\Comment[39;24m {#8058
+        [34mid[39m: [35m4[39m,
+        [34mpost_id[39m: [35m1[39m,
+        [34muser_id[39m: [35m3[39m,
+        [34mbody[39m: [32m"[39m[32mMaiores et sunt qui rerum sit corporis. Nostrum id aliquam voluptatum doloremque. Ab aperiam sit odio cupiditate sit tenetur distinctio.[39m[32m"[39m,
+        [34mcreated_at[39m: [32m"[39m[32m2026-05-13 14:16:54[39m[32m"[39m,
+        [34mupdated_at[39m: [32m"[39m[32m2026-05-13 14:16:54[39m[32m"[39m,
+      },
+      [34;4mApp\Models\Comment[39;24m {#8059
+        [34mid[39m: [35m6[39m,
+        [34mpost_id[39m: [35m1[39m,
+        [34muser_id[39m: [35m4[39m,
+        [34mbody[39m: [32m"[39m[32mSit in voluptatem mollitia eaque. Ut minus eos error nesciunt enim reprehenderit.[39m[32m"[39m,
+        [34mcreated_at[39m: [32m"[39m[32m2026-05-13 14:16:54[39m[32m"[39m,
+        [34mupdated_at[39m: [32m"[39m[32m2026-05-13 14:16:54[39m[32m"[39m,
+      },
+      [34;4mApp\Models\Comment[39;24m {#8060
+        [34mid[39m: [35m12[39m,
+        [34mpost_id[39m: [35m1[39m,
+        [34muser_id[39m: [35m2[39m,
+        [34mbody[39m: [32m"[39m[32mRepellendus voluptatum possimus deleniti eaque. Et minus dolores at ea aliquam quam.[39m[32m"[39m,
+        [34mcreated_at[39m: [32m"[39m[32m2026-05-13 14:16:54[39m[32m"[39m,
+        [34mupdated_at[39m: [32m"[39m[32m2026-05-13 14:16:54[39m[32m"[39m,
+      },
+      [34;4mApp\Models\Comment[39;24m {#8108
+        [34mid[39m: [35m16[39m,
+        [34mpost_id[39m: [35m1[39m,
+        [34muser_id[39m: [35m1[39m,
+        [34mbody[39m: [32m"[39m[32mNam officia sint molestias numquam et assumenda quis. Illo id doloribus eos ut. Itaque et eveniet quidem id.[39m[32m"[39m,
+        [34mcreated_at[39m: [32m"[39m[32m2026-05-13 14:16:54[39m[32m"[39m,
+        [34mupdated_at[39m: [32m"[39m[32m2026-05-13 14:16:54[39m[32m"[39m,
+      },
+      [34;4mApp\Models\Comment[39;24m {#8097
+        [34mid[39m: [35m23[39m,
+        [34mpost_id[39m: [35m1[39m,
+        [34muser_id[39m: [35m4[39m,
+        [34mbody[39m: [32m"[39m[32mAlias consequatur quaerat est ut inventore. Consequatur sed molestiae sed commodi aut tenetur ducimus.[39m[32m"[39m,
+        [34mcreated_at[39m: [32m"[39m[32m2026-05-13 14:16:54[39m[32m"[39m,
+        [34mupdated_at[39m: [32m"[39m[32m2026-05-13 14:16:54[39m[32m"[39m,
+      },
+    ],
+  }

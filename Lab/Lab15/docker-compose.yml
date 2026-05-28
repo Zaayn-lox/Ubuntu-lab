@@ -1,0 +1,108 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: boardy-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./src/boardy-laravel/public:/var/www/html/public:ro
+      - laravel_storage:/var/www/html/storage:ro
+    depends_on:
+      - laravel
+      - fastapi
+    networks:
+      - boardy_net
+
+  laravel:
+    build:
+      context: ./src/boardy-laravel
+      dockerfile: Dockerfile
+    container_name: boardy-laravel
+    working_dir: /var/www/html
+    volumes:
+      - laravel_storage:/var/www/html/storage
+    env_file:
+      - ./src/boardy-laravel/.env
+    command: >
+      sh -c "
+      mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache &&
+      chown -R www-data:www-data storage bootstrap/cache &&
+      chmod -R 775 storage bootstrap/cache &&
+      if [ -f storage/oauth-private.key ]; then chmod 600 storage/oauth-private.key; fi &&
+      if [ -f storage/oauth-public.key ]; then chmod 644 storage/oauth-public.key; fi &&
+      php-fpm
+      "
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - boardy_net
+
+  fastapi:
+    build:
+      context: ./src/boardy-api
+      dockerfile: Dockerfile
+    container_name: boardy-api
+    working_dir: /app
+    volumes:
+      - laravel_storage:/laravel-storage:ro
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: boardy_api
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      OAUTH_PUBLIC_KEY: /laravel-storage/oauth-public.key
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - boardy_net
+
+  mysql:
+    image: mysql:8
+    container_name: boardy-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - boardy_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: boardy-redis
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - boardy_net
+
+volumes:
+  mysql_data:
+  redis_data:
+  laravel_storage:
+
+networks:
+  boardy_net:
+    driver: bridge
