@@ -6,6 +6,8 @@ use App\Models\Post;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\View\View;
 
 class PostController extends Controller
@@ -38,6 +40,19 @@ class PostController extends Controller
         ]);
 
         $post = $request->user()->posts()->create($data);
+        $post->load('author');
+
+        try {
+            Redis::publish('new_post', json_encode([
+                'id' => $post->id,
+                'title' => $post->title,
+                'body' => $post->body,
+                'author' => $post->author->name,
+                'created_at' => $post->created_at->format('Y-m-d H:i'),
+            ], JSON_UNESCAPED_UNICODE));
+        } catch (\Throwable $e) {
+            Log::warning('Redis publish new_post failed: ' . $e->getMessage());
+        }
 
         return redirect()
             ->route('posts.show', $post)
@@ -46,10 +61,7 @@ class PostController extends Controller
 
     public function show(Post $post): View
     {
-        $post->load([
-            'author',
-            'comments.author',
-        ]);
+        $post->load('author');
 
         return view('posts.show', compact('post'));
     }
