@@ -33,3 +33,11 @@ Route::get('/auth/github/callback', [GitHubController::class, 'callback'])
     ->name('auth.github.callback');
 
 require __DIR__.'/auth.php';
+
+Route::get('/oauth/callback', function () {
+    return view('oauth.callback');
+})->name('oauth.callback');
+
+Route::get('/health', function () {
+    return response()->json(['ok' => true]);
+});

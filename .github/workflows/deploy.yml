@@ -1,0 +1,177 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/zaayn-lox/ubuntu-lab
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: PHP syntax check
+        run: |
+          find src/boardy-laravel -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      - name: Python syntax check
+        run: |
+          python -m compileall src/boardy-api -q
+
+  smoke:
+    name: smoke
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare env files
+        run: |
+          cp .env.example .env
+          cp src/boardy-laravel/.env.example src/boardy-laravel/.env
+
+      - name: Build images
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.local.yml build
+
+      - name: Start stack
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+
+      - name: Wait for Laravel health
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://localhost/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f docker-compose.yml -f docker-compose.local.yml logs
+          exit 1
+
+      - name: Smoke endpoints
+        run: |
+          curl -f http://localhost/health
+          curl -f http://localhost/api/health
+
+      - name: Tear down
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.local.yml down -v
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    needs: smoke
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, mbstring, zip, opcache, redis
+
+      - name: Install Laravel dependencies
+        working-directory: src/boardy-laravel
+        run: |
+          composer install --no-interaction --prefer-dist
+          cp .env.example .env
+          php artisan key:generate --ansi
+
+      - name: Run PHPUnit
+        working-directory: src/boardy-laravel
+        run: |
+          php artisan test --filter=HealthTest
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install FastAPI dependencies
+        working-directory: src/boardy-api
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run pytest
+        working-directory: src/boardy-api
+        run: |
+          pytest -v tests/test_health.py
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    needs: test
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push Laravel image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./src/boardy-laravel
+          file: ./src/boardy-laravel/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-laravel:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}-laravel:latest
+
+      - name: Build and push FastAPI image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./src/boardy-api
+          file: ./src/boardy-api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-api:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}-api:latest
+
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    needs: build
+
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/boardy
+            git pull
+            echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            docker compose pull
+            docker compose up -d
+            docker image prune -f
