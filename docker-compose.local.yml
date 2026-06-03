@@ -1,0 +1,12 @@
+services:
+  laravel:
+    build:
+      context: ./src/boardy-laravel
+      dockerfile: Dockerfile
+    image: boardy-laravel:local
+
+  fastapi:
+    build:
+      context: ./src/boardy-api
+      dockerfile: Dockerfile
+    image: boardy-api:local
